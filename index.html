@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CARTAGO RESILIENTE 🌋 - Experiencia Visual 3D Interactiva</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .neon-glow {
+            text-shadow: 0 0 10px rgba(102, 126, 234, 0.8),
+                         0 0 20px rgba(102, 126, 234, 0.6),
+                         0 0 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .bounce-in {
+            animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .mode-button {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .mode-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .mode-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.8);
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d1b4e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .seismograph {
+            width: 100%;
+            height: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .seismograph-line {
+            stroke: #667eea;
+            stroke-width: 2;
+            fill: none;
+            filter: drop-shadow(0 0 5px #667eea);
+        }
+
+        .achievement {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 20px 30px;
+            border-radius: 15px;
+            font-weight: 600;
+            transform: translateX(400px);
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+        }
+
+        .achievement.show {
+            transform: translateX(0);
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        @media (max-width: 768px) {
+            #control-panel {
+                width: 100% !important;
+                height: auto !important;
+                max-height: 40vh;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                top: auto !important;
+                border-radius: 20px 20px 0 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <h1 class="text-5xl md:text-7xl font-bold gradient-text neon-glow mb-8">CARTAGO RESILIENTE</h1>
+        <p class="text-xl md:text-2xl text-white mb-8">Despertando la memoria sísmica de Cartago...</p>
+        <div class="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div id="loading-bar" class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p id="loading-text" class="text-white mt-4 text-sm">Cargando...</p>
+    </div>
+
+    <!-- Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Control Panel -->
+    <div id="control-panel" class="fixed top-4 left-4 w-96 max-h-screen overflow-y-auto glassmorphism rounded-2xl p-6 text-white slide-in" style="max-height: calc(100vh - 2rem);">
+        <!-- Header -->
+        <div class="mb-6">
+            <h2 class="text-3xl font-bold gradient-text mb-2">CARTAGO RESILIENTE</h2>
+            <p class="text-sm text-gray-300">💪 Cartago se mueve pero no se cae</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="glassmorphism rounded-lg p-4">
+                <p class="text-xs text-gray-400 mb-1">Total Sismos</p>
+                <p id="total-quakes" class="text-3xl font-bold gradient-text">0</p>
+            </div>
+            <div class="glassmorphism rounded-lg p-4">
+                <p class="text-xs text-gray-400 mb-1">Resiliencia</p>
+                <p class="text-3xl font-bold" style="color: #667eea;">LEGENDARIA</p>
+            </div>
+        </div>
+
+        <!-- Seismograph -->
+        <div class="glassmorphism rounded-lg p-4 mb-6">
+            <p class="text-xs text-gray-400 mb-2">Sismómetro en Tiempo Real</p>
+            <div class="seismograph">
+                <svg id="seismograph-svg" width="100%" height="60">
+                    <path class="seismograph-line" d="M0,30 L350,30" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="mb-6">
+            <p class="text-xs text-gray-400 mb-3">MODOS DE VISUALIZACIÓN</p>
+            <div class="space-y-2">
+                <button class="mode-button active glassmorphism w-full p-3 rounded-lg text-left" data-mode="explorer">
+                    <span class="font-semibold">🔍 MODO EXPLORADOR</span>
+                    <p class="text-xs text-gray-400">Click y arrastra libremente</p>
+                </button>
+                <button class="mode-button glassmorphism w-full p-3 rounded-lg text-left" data-mode="history">
+                    <span class="font-semibold">📖 MODO HISTORIA</span>
+                    <p class="text-xs text-gray-400">Revive los sismos cronológicamente</p>
+                </button>
+                <button class="mode-button glassmorphism w-full p-3 rounded-lg text-left" data-mode="chaos">
+                    <span class="font-semibold">💥 MODO CAOS</span>
+                    <p class="text-xs text-gray-400">Todos los sismos pulsando</p>
+                </button>
+                <button class="mode-button glassmorphism w-full p-3 rounded-lg text-left" data-mode="rain">
+                    <span class="font-semibold">☄️ MODO LLUVIA</span>
+                    <p class="text-xs text-gray-400">Sismos caen como meteoritos</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- Fun Facts -->
+        <div class="glassmorphism rounded-lg p-4 mb-6">
+            <p class="text-xs text-gray-400 mb-2">💡 DATO CURIOSO</p>
+            <p id="fun-fact" class="text-sm">¿Sabías que Cartago ha resistido más de 255 sismos desde 1994?</p>
+        </div>
+
+        <!-- Badge -->
+        <div class="text-center glassmorphism rounded-lg p-4">
+            <p class="text-4xl mb-2">🏆</p>
+            <p class="font-bold text-lg gradient-text">Cartago Inquebrantable</p>
+            <p class="text-xs text-gray-400">Resiliencia Sísmica: Nivel MÁXIMO</p>
+        </div>
+
+        <!-- Instructions -->
+        <div class="mt-6 text-xs text-gray-400 space-y-1">
+            <p><strong>Controles:</strong></p>
+            <p>• 1-4: Cambiar modos</p>
+            <p>• Click: Ver detalles del sismo</p>
+            <p>• Doble Click: Zoom dramático</p>
+            <p>• Arrastra: Rotar vista</p>
+            <p>• Rueda: Zoom in/out</p>
+        </div>
+    </div>
+
+    <!-- Achievement Notification -->
+    <div id="achievement" class="achievement glassmorphism hidden">
+        <p class="text-2xl mb-2">🏆</p>
+        <p class="text-lg font-bold">¡Logro Desbloqueado!</p>
+        <p id="achievement-text" class="text-sm">Sismólogo Pro</p>
+    </div>
+
+    <script>
+        // ==========================================
+        // CARTAGO RESILIENTE - Main Application
+        // ==========================================
+
+        let scene, camera, renderer, controls;
+        let cartagoPlanet, earthquakes = [];
+        let particleSystems = [];
+        let currentMode = 'explorer';
+        let clickCount = 0;
+        let mouseShakeDetector = { x: 0, y: 0, shakeCount: 0, lastTime: 0 };
+        let animationId;
+        let raycaster, mouse;
+        let isLoading = true;
+
+        const funFacts = [
+            "¿Sabías que Cartago ha resistido más de 255 sismos desde 1994?",
+            "El sismo más superficial registrado fue a solo 0 km de profundidad",
+            "El sismo más profundo alcanzó 149.7 km bajo la superficie",
+            "Enero de 2024 registró la mayor actividad sísmica con múltiples eventos",
+            "La magnitud más alta registrada fue de 3.4 Mi",
+            "Cartago: 30 años de datos sísmicos, 30 años de resiliencia 💪",
+            "Los sismos superficiales (<20km) se ven como erupciones rojas 🔴",
+            "Los sismos profundos (>60km) se ven como implosiones azules 🔵"
+        ];
+
+        // CSV Data storage
+        let earthquakeData = [];
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+
+        async function init() {
+            updateLoadingProgress(10, 'Inicializando escena 3D...');
+
+            // Setup Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.00025);
+
+            // Setup Camera
+            camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 5, 15);
+
+            // Setup Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Raycaster for interactions
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            updateLoadingProgress(20, 'Creando el universo...');
+
+            // Create Starfield
+            createStarfield();
+
+            updateLoadingProgress(30, 'Forjando el planeta Cartago...');
+
+            // Create Cartago Planet
+            createCartagoPlanet();
+
+            updateLoadingProgress(40, 'Iluminando la escena...');
+
+            // Add Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0x667eea, 1, 100);
+            pointLight.position.set(10, 10, 10);
+            scene.add(pointLight);
+
+            const secondLight = new THREE.PointLight(0xf093fb, 0.5, 100);
+            secondLight.position.set(-10, -10, 10);
+            scene.add(secondLight);
+
+            updateLoadingProgress(50, 'Cargando memoria sísmica...');
+
+            // Load Earthquake Data
+            await loadEarthquakeData();
+
+            updateLoadingProgress(70, 'Creando visualizaciones...');
+
+            // Create Earthquake Visualizations
+            createEarthquakeVisualizations();
+
+            updateLoadingProgress(85, 'Configurando controles...');
+
+            // Setup Controls
+            setupEventListeners();
+
+            updateLoadingProgress(95, 'Finalizando...');
+
+            // Random fun fact rotation
+            setInterval(rotateFunFact, 10000);
+
+            updateLoadingProgress(100, '¡Listo!');
+
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.display = 'none';
+                    isLoading = false;
+                }, 500);
+            }, 500);
+
+            // Start Animation
+            animate();
+        }
+
+        function updateLoadingProgress(percent, text) {
+            document.getElementById('loading-bar').style.width = percent + '%';
+            document.getElementById('loading-text').textContent = text;
+        }
+
+        // ==========================================
+        // SCENE CREATION
+        // ==========================================
+
+        function createStarfield() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.7,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const starsVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starsVertices.push(x, y, z);
+            }
+
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
+        }
+
+        function createCartagoPlanet() {
+            const geometry = new THREE.SphereGeometry(5, 64, 64);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x2d5a3d,
+                emissive: 0x112211,
+                shininess: 30,
+                transparent: true,
+                opacity: 0.9
+            });
+
+            cartagoPlanet = new THREE.Mesh(geometry, material);
+            cartagoPlanet.castShadow = true;
+            cartagoPlanet.receiveShadow = true;
+            scene.add(cartagoPlanet);
+
+            // Add planet ring/grid
+            const ringGeometry = new THREE.RingGeometry(6, 6.2, 64);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: 0x667eea,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.3
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.rotation.x = Math.PI / 2;
+            cartagoPlanet.add(ring);
+        }
+
+        // ==========================================
+        // DATA LOADING
+        // ==========================================
+
+        async function loadEarthquakeData() {
+            try {
+                const response = await fetch('sismos_cartago.csv');
+                const csvText = await response.text();
+                const lines = csvText.split('\n').slice(1); // Skip header
+
+                earthquakeData = lines.filter(line => line.trim()).map(line => {
+                    const parts = line.split(';');
+                    return {
+                        id: parts[0],
+                        fecha: parts[1],
+                        hora: parts[2],
+                        latitud: parseFloat(parts[3]),
+                        longitud: parseFloat(parts[4]),
+                        profundidad: parseFloat(parts[5]),
+                        magnitud: parseFloat(parts[6]),
+                        departamento: parts[7],
+                        municipio: parts[8]
+                    };
+                });
+
+                document.getElementById('total-quakes').textContent = earthquakeData.length;
+            } catch (error) {
+                console.error('Error loading earthquake data:', error);
+            }
+        }
+
+        // ==========================================
+        // EARTHQUAKE VISUALIZATIONS
+        // ==========================================
+
+        function createEarthquakeVisualizations() {
+            earthquakeData.forEach((quake, index) => {
+                // Convert lat/lng to 3D position on sphere
+                const phi = (90 - quake.latitud) * (Math.PI / 180);
+                const theta = (quake.longitud + 180) * (Math.PI / 180);
+
+                const radius = 5.1; // Just above planet surface
+                const x = -(radius * Math.sin(phi) * Math.cos(theta));
+                const y = radius * Math.cos(phi);
+                const z = radius * Math.sin(phi) * Math.sin(theta);
+
+                // Determine color based on depth
+                let color;
+                if (quake.profundidad < 20) {
+                    color = 0xff4444; // Shallow - Red lava
+                } else if (quake.profundidad < 60) {
+                    color = 0xffaa00; // Medium - Orange
+                } else {
+                    color = 0x4444ff; // Deep - Blue cold
+                }
+
+                // Create earthquake marker
+                const size = 0.1 + (quake.magnitud / 3.4) * 0.3;
+                const geometry = new THREE.SphereGeometry(size, 16, 16);
+                const material = new THREE.MeshPhongMaterial({
+                    color: color,
+                    emissive: color,
+                    emissiveIntensity: 0.5,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const marker = new THREE.Mesh(geometry, material);
+                marker.position.set(x, y, z);
+                marker.userData = quake;
+                marker.userData.originalColor = color;
+                marker.userData.originalScale = size;
+
+                scene.add(marker);
+                earthquakes.push(marker);
+            });
+        }
+
+        // ==========================================
+        // PARTICLE SYSTEM
+        // ==========================================
+
+        function createExplosion(position, magnitude, depth) {
+            const particleCount = Math.floor(magnitude * 50);
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const velocities = [];
+
+            let color;
+            if (depth < 20) {
+                color = new THREE.Color(0xff4444);
+            } else if (depth < 60) {
+                color = new THREE.Color(0xffaa00);
+            } else {
+                color = new THREE.Color(0x4444ff);
+            }
+
+            for (let i = 0; i < particleCount; i++) {
+                positions.push(position.x, position.y, position.z);
+
+                // Random velocity
+                velocities.push(
+                    (Math.random() - 0.5) * 0.2,
+                    (Math.random() - 0.5) * 0.2,
+                    (Math.random() - 0.5) * 0.2
+                );
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({
+                color: color,
+                size: 0.1,
+                transparent: true,
+                opacity: 1,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            particles.userData.velocities = velocities;
+            particles.userData.life = 1.0;
+
+            scene.add(particles);
+            particleSystems.push(particles);
+        }
+
+        function updateParticles() {
+            for (let i = particleSystems.length - 1; i >= 0; i--) {
+                const system = particleSystems[i];
+                const positions = system.geometry.attributes.position.array;
+                const velocities = system.userData.velocities;
+
+                // Update positions
+                for (let j = 0; j < positions.length; j += 3) {
+                    positions[j] += velocities[j];
+                    positions[j + 1] += velocities[j + 1];
+                    positions[j + 2] += velocities[j + 2];
+                }
+
+                system.geometry.attributes.position.needsUpdate = true;
+
+                // Fade out
+                system.userData.life -= 0.02;
+                system.material.opacity = system.userData.life;
+
+                if (system.userData.life <= 0) {
+                    scene.remove(system);
+                    particleSystems.splice(i, 1);
+                }
+            }
+        }
+
+        // ==========================================
+        // MODES
+        // ==========================================
+
+        let historyIndex = 0;
+        let historyInterval;
+
+        function setMode(mode) {
+            currentMode = mode;
+
+            // Clear existing mode states
+            if (historyInterval) clearInterval(historyInterval);
+            historyIndex = 0;
+
+            // Reset all earthquakes
+            earthquakes.forEach(eq => {
+                eq.material.opacity = 0.8;
+                eq.scale.set(1, 1, 1);
+            });
+
+            // Apply mode
+            switch(mode) {
+                case 'history':
+                    startHistoryMode();
+                    break;
+                case 'chaos':
+                    startChaosMode();
+                    break;
+                case 'rain':
+                    startRainMode();
+                    break;
+                case 'explorer':
+                    // Default mode - all visible
+                    break;
+            }
+
+            // Update seismograph
+            updateSeismograph();
+        }
+
+        function startHistoryMode() {
+            earthquakes.forEach(eq => eq.material.opacity = 0.1);
+
+            historyInterval = setInterval(() => {
+                if (historyIndex < earthquakes.length) {
+                    const eq = earthquakes[historyIndex];
+                    eq.material.opacity = 0.8;
+
+                    // Create explosion effect
+                    createExplosion(
+                        eq.position,
+                        eq.userData.magnitud,
+                        eq.userData.profundidad
+                    );
+
+                    // Camera follow
+                    const targetPos = eq.position.clone().multiplyScalar(1.5);
+                    camera.position.lerp(targetPos, 0.1);
+                    camera.lookAt(0, 0, 0);
+
+                    historyIndex++;
+                } else {
+                    clearInterval(historyInterval);
+                    historyIndex = 0;
+                }
+            }, 200);
+        }
+
+        function startChaosMode() {
+            earthquakes.forEach(eq => {
+                eq.userData.pulsing = true;
+            });
+        }
+
+        function startRainMode() {
+            earthquakes.forEach((eq, index) => {
+                eq.position.y = 20 + index * 0.5;
+                eq.userData.falling = true;
+                eq.userData.fallSpeed = 0.05 + (eq.userData.magnitud / 3.4) * 0.1;
+            });
+        }
+
+        function updateModeAnimations() {
+            if (currentMode === 'chaos') {
+                earthquakes.forEach(eq => {
+                    if (eq.userData.pulsing) {
+                        const scale = 1 + Math.sin(Date.now() * 0.003 + eq.id) * 0.3;
+                        eq.scale.set(scale, scale, scale);
+
+                        if (Math.random() < 0.01) {
+                            createExplosion(eq.position, eq.userData.magnitud * 0.5, eq.userData.profundidad);
+                        }
+                    }
+                });
+            }
+
+            if (currentMode === 'rain') {
+                earthquakes.forEach(eq => {
+                    if (eq.userData.falling) {
+                        eq.position.y -= eq.userData.fallSpeed;
+
+                        if (eq.position.y <= 0) {
+                            createExplosion(eq.position, eq.userData.magnitud, eq.userData.profundidad);
+                            eq.userData.falling = false;
+                        }
+                    }
+                });
+            }
+        }
+
+        // ==========================================
+        // INTERACTIONS
+        // ==========================================
+
+        function setupEventListeners() {
+            // Mode buttons
+            document.querySelectorAll('.mode-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.mode-button').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    setMode(btn.dataset.mode);
+                });
+            });
+
+            // Mouse interactions
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('click', onMouseClick);
+            renderer.domElement.addEventListener('dblclick', onMouseDoubleClick);
+
+            // Keyboard
+            document.addEventListener('keydown', onKeyDown);
+
+            // Touch for mobile
+            renderer.domElement.addEventListener('touchstart', onTouchStart);
+            renderer.domElement.addEventListener('touchmove', onTouchMove);
+
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Shake detection
+            const currentTime = Date.now();
+            if (currentTime - mouseShakeDetector.lastTime < 50) {
+                const dx = Math.abs(event.movementX);
+                const dy = Math.abs(event.movementY);
+
+                if (dx > 20 || dy > 20) {
+                    mouseShakeDetector.shakeCount++;
+
+                    if (mouseShakeDetector.shakeCount > 10) {
+                        triggerEarthquakeShake();
+                        mouseShakeDetector.shakeCount = 0;
+                    }
+                }
+            }
+            mouseShakeDetector.lastTime = currentTime;
+
+            // Hover effect
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(earthquakes);
+
+            earthquakes.forEach(eq => {
+                if (!eq.userData.pulsing) {
+                    eq.scale.set(1, 1, 1);
+                }
+            });
+
+            if (intersects.length > 0) {
+                const eq = intersects[0].object;
+                if (!eq.userData.pulsing) {
+                    eq.scale.set(1.5, 1.5, 1.5);
+                }
+                document.body.style.cursor = 'pointer';
+            } else {
+                document.body.style.cursor = 'default';
+            }
+        }
+
+        function onMouseClick(event) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(earthquakes);
+
+            if (intersects.length > 0) {
+                const eq = intersects[0].object;
+                createDataConfetti(eq);
+                clickCount++;
+
+                if (clickCount >= 10) {
+                    showAchievement('¡Sismólogo Pro! 🎓', '10 sismos explorados');
+                    clickCount = 0;
+                }
+            }
+        }
+
+        function onMouseDoubleClick(event) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(earthquakes);
+
+            if (intersects.length > 0) {
+                const eq = intersects[0].object;
+                dramaticZoom(eq);
+            }
+        }
+
+        function onKeyDown(event) {
+            switch(event.key) {
+                case '1':
+                    document.querySelector('[data-mode="explorer"]').click();
+                    break;
+                case '2':
+                    document.querySelector('[data-mode="history"]').click();
+                    break;
+                case '3':
+                    document.querySelector('[data-mode="chaos"]').click();
+                    break;
+                case '4':
+                    document.querySelector('[data-mode="rain"]').click();
+                    break;
+            }
+        }
+
+        let touchStartX = 0, touchStartY = 0;
+
+        function onTouchStart(event) {
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+        }
+
+        function onTouchMove(event) {
+            if (!touchStartX || !touchStartY) return;
+
+            const deltaX = event.touches[0].clientX - touchStartX;
+            const deltaY = event.touches[0].clientY - touchStartY;
+
+            cartagoPlanet.rotation.y += deltaX * 0.01;
+            cartagoPlanet.rotation.x += deltaY * 0.01;
+
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // ==========================================
+        // SPECIAL EFFECTS
+        // ==========================================
+
+        function createDataConfetti(earthquake) {
+            const data = earthquake.userData;
+            const confettiTexts = [
+                `📅 ${data.fecha}`,
+                `⏰ ${data.hora}`,
+                `📊 ${data.magnitud} Mi`,
+                `📏 ${data.profundidad} km`,
+                `📍 ${data.municipio}`
+            ];
+
+            confettiTexts.forEach((text, i) => {
+                const div = document.createElement('div');
+                div.className = 'confetti';
+                div.textContent = text;
+                div.style.left = `${window.innerWidth / 2}px`;
+                div.style.top = `${window.innerHeight / 2}px`;
+                div.style.color = '#fff';
+                div.style.fontSize = '14px';
+                div.style.fontWeight = 'bold';
+                div.style.background = 'rgba(102, 126, 234, 0.8)';
+                div.style.padding = '5px 10px';
+                div.style.borderRadius = '5px';
+
+                document.body.appendChild(div);
+
+                const angle = (i / confettiTexts.length) * Math.PI * 2;
+                const distance = 100;
+                const targetX = Math.cos(angle) * distance;
+                const targetY = Math.sin(angle) * distance;
+
+                setTimeout(() => {
+                    div.style.transition = 'all 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                    div.style.transform = `translate(${targetX}px, ${targetY}px)`;
+                    div.style.opacity = '0';
+                }, 10);
+
+                setTimeout(() => div.remove(), 1100);
+            });
+        }
+
+        function dramaticZoom(earthquake) {
+            const targetPos = earthquake.position.clone().multiplyScalar(2);
+            const duration = 1000;
+            const startPos = camera.position.clone();
+            const startTime = Date.now();
+
+            function zoomAnimation() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+
+                camera.position.lerpVectors(startPos, targetPos, eased);
+                camera.lookAt(0, 0, 0);
+
+                if (progress < 1) {
+                    requestAnimationFrame(zoomAnimation);
+                } else {
+                    createExplosion(earthquake.position, earthquake.userData.magnitud * 2, earthquake.userData.profundidad);
+                }
+            }
+
+            zoomAnimation();
+        }
+
+        function triggerEarthquakeShake() {
+            const shakeIntensity = 0.5;
+            const shakeDuration = 500;
+            const startTime = Date.now();
+
+            function shake() {
+                const elapsed = Date.now() - startTime;
+                if (elapsed < shakeDuration) {
+                    camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+                    camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+                    requestAnimationFrame(shake);
+                }
+            }
+
+            shake();
+            showAchievement('¡Terremoto Simulado! 🌪️', 'Sacudiste la pantalla');
+        }
+
+        function showAchievement(title, subtitle) {
+            const achievement = document.getElementById('achievement');
+            achievement.querySelector('p:nth-child(2)').textContent = title;
+            document.getElementById('achievement-text').textContent = subtitle;
+            achievement.classList.remove('hidden');
+            achievement.classList.add('show');
+
+            setTimeout(() => {
+                achievement.classList.remove('show');
+                setTimeout(() => achievement.classList.add('hidden'), 500);
+            }, 3000);
+        }
+
+        function rotateFunFact() {
+            const fact = funFacts[Math.floor(Math.random() * funFacts.length)];
+            const element = document.getElementById('fun-fact');
+            element.style.opacity = '0';
+            setTimeout(() => {
+                element.textContent = fact;
+                element.style.opacity = '1';
+            }, 300);
+            element.style.transition = 'opacity 0.3s';
+        }
+
+        function updateSeismograph() {
+            const svg = document.getElementById('seismograph-svg');
+            const path = svg.querySelector('path');
+            let d = 'M0,30';
+
+            for (let i = 0; i < 350; i += 5) {
+                let y = 30;
+                if (currentMode === 'chaos') {
+                    y += Math.sin(i * 0.1 + Date.now() * 0.01) * 15;
+                } else if (currentMode === 'history') {
+                    y += Math.sin(i * 0.2) * 5;
+                }
+                d += ` L${i},${y}`;
+            }
+
+            path.setAttribute('d', d);
+        }
+
+        // ==========================================
+        // ANIMATION LOOP
+        // ==========================================
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isLoading) {
+                // Rotate planet slowly
+                cartagoPlanet.rotation.y += 0.001;
+
+                // Update particles
+                updateParticles();
+
+                // Update mode animations
+                updateModeAnimations();
+
+                // Update seismograph in real-time
+                updateSeismograph();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // ==========================================
+        // START APPLICATION
+        // ==========================================
+
+        init();
+    </script>
+</body>
+</html>
