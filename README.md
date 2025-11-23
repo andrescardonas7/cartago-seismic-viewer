@@ -77,21 +77,30 @@ Interfaz estilo "sala de control" con:
 
 ## 🚀 Cómo Usar
 
-### Opción 1: Abrir Directamente
-```bash
-# Solo necesitas abrir el archivo en un navegador
-open index.html
-```
+### ⚡ Sin Instalación (Recomendado)
 
-### Opción 2: Servidor Local
 ```bash
-# Con Python
+# Servidor local simple con Python
 python3 -m http.server 8000
 
-# Con Node.js
+# O con Node.js
 npx serve
 
 # Luego abre: http://localhost:8000
+```
+
+**IMPORTANTE**: Debe ejecutarse desde un servidor local (no file://) para que funcione la carga del CSV.
+
+### 🎯 Estructura del Proyecto
+
+```
+cartago-seismic-viewer/
+├── index.html          # HTML principal con imports
+├── app.js             # Aplicación Three.js (ES6 modules)
+├── styles.css         # Estilos modernos con glassmorphism
+├── public/
+│   └── sismos_cartago.csv  # Datos sísmicos
+└── README.md          # Este archivo
 ```
 
 ## 📊 Datos
@@ -110,19 +119,22 @@ El proyecto incluye `sismos_cartago.csv` con 255 sismos registrados:
 
 ## 🛠️ Tecnologías
 
-- **[Three.js](https://threejs.org/)** - Renderizado 3D
-- **[Tailwind CSS](https://tailwindcss.com/)** - Diseño moderno
-- **JavaScript Vanilla** - Lógica e interactividad
-- **HTML5 Canvas** - Gráficos de alto rendimiento
-- **Google Fonts (Poppins)** - Tipografía moderna
+- **[Three.js](https://threejs.org/) v0.160** - Renderizado 3D avanzado desde CDN
+- **ES6 Modules** - JavaScript moderno y modular
+- **OrbitControls** - Controles de cámara suaves
+- **EffectComposer** - Post-procesamiento con Bloom
+- **Custom CSS3** - Diseño con glassmorphism y gradientes
+- **Google Fonts (Orbitron + Inter)** - Tipografía moderna
 
 ## 🎨 Diseño
 
-- **Glassmorphism**: Paneles con efecto de vidrio esmerilado
-- **Gradientes**: Colores púrpura/rosa para energía visual
-- **Animaciones**: Transiciones suaves con cubic-bezier
+- **Glassmorphism**: Paneles con efecto de vidrio esmerilado y blur
+- **Gradientes Épicos**: Colores púrpura (#667eea) → rosa (#f093fb)
+- **Bloom Effect**: Post-procesamiento con UnrealBloomPass
+- **Animaciones Suaves**: Easing cubic-bezier personalizado
 - **Neon Glow**: Efectos de brillo neón en textos
-- **Responsive**: Funciona perfecto en móvil y escritorio
+- **Responsive**: Optimizado para móvil y escritorio
+- **Tipografía Moderna**: Orbitron (títulos) + Inter (texto)
 
 ## 📱 Compatibilidad
 
